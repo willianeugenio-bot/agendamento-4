@@ -21,10 +21,6 @@ headers = {"Authorization": f"Bearer {TOKEN}"}
 def obter_horarios():
     eventos_final = []
     agora_utc = datetime.now(timezone.utc)
-    
-    # Busca fiel com 1 minuto de margem
-    start_time = agora_utc + timedelta(minutes=1)
-    end_time = start_time + timedelta(days=7)
 
     for uri in URIs:
         uuid = uri.split('/')[-1]
@@ -33,28 +29,36 @@ def obter_horarios():
         if not info:
             continue # Pula se o UUID não estiver no mapa
             
-        params = {
-            "event_type": uri,
-            "start_time": start_time.strftime('%Y-%m-%dT%H:%M:%SZ'),
-            "end_time": end_time.strftime('%Y-%m-%dT%H:%M:%SZ')
-        }
+        # Dividimos em duas buscas para respeitar o limite de 7 dias do Calendly
+        # Fatias: [Hoje até dia 7] e [Dia 7 até dia 10]
+        intervalos = [
+            (agora_utc + timedelta(minutes=1), agora_utc + timedelta(days=7)),
+            (agora_utc + timedelta(days=7, minutes=1), agora_utc + timedelta(days=10))
+        ]
         
-        try:
-            res = requests.get("https://api.calendly.com/event_type_available_times", headers=headers, params=params)
-            if res.status_code == 200:
-                slots = res.json().get('collection', [])
-                for slot in slots:
-                    eventos_final.append({
-                        "title": f"Falar com {info['nome']}",
-                        "start": slot['start_time'],
-                        "url": slot['scheduling_url']
-                    })
-        except Exception as e:
-            print(f"Erro ao processar {info['nome']}: {e}")
+        for start_time, end_time in intervalos:
+            params = {
+                "event_type": uri,
+                "start_time": start_time.strftime('%Y-%m-%dT%H:%M:%SZ'),
+                "end_time": end_time.strftime('%Y-%m-%dT%H:%M:%SZ')
+            }
+            
+            try:
+                res = requests.get("https://api.calendly.com/event_type_available_times", headers=headers, params=params)
+                if res.status_code == 200:
+                    slots = res.json().get('collection', [])
+                    for slot in slots:
+                        eventos_final.append({
+                            "title": f"Falar com {info['nome']}",
+                            "start": slot['start_time'],
+                            "url": slot['scheduling_url']
+                        })
+            except Exception as e:
+                print(f"Erro ao processar {info['nome']}: {e}")
 
     with open("horarios.json", "w") as f:
         json.dump(eventos_final, f, indent=4)
-    print("Arquivo horarios.json atualizado com sucesso.")
+    print("Arquivo horarios.json atualizado com sucesso (10 dias buscados).")
 
 if __name__ == "__main__":
     obter_horarios()
