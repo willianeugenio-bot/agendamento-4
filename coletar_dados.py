@@ -11,8 +11,8 @@ URIs = [
 
 # Mapeamento (As cores não aparecerão na tela final, mas mantemos por estrutura)
 MAPA_NOMES = {
-    "ea4bb07a-fb88-4049-9ee2-ab21d6cf660d": {"nome": "VidaComCnpj", "cor": "#007bff"},
-    "e65136bd-badd-424c-a63c-c6f46b428fb3": {"nome": "Jarleny", "cor": "#007bff"},
+    "ea4bb07a-fb88-4049-9ee2-ab21d6cf660d": {"nome": "LP -", "cor": "#007bff"},
+    "e65136bd-badd-424c-a63c-c6f46b428fb3": {"nome": "LP -", "cor": "#007bff"}
 }
 
 TOKEN = os.getenv("CALENDLY_TOKEN")
