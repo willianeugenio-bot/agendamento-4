@@ -97,51 +97,32 @@
 </div>
 
 <script>
-    // Feriados Nacionais - Regra de Dias Úteis
-    const feriados = [
-        '01-01', '04-21', '05-01', '09-07', '10-12', '11-02', '11-15', '12-25',
-        '2026-02-16', '2026-02-17', '2026-04-03', '2026-06-04',
-        '2027-02-08', '2027-02-09', '2027-03-26', '2027-05-27'
-    ];
-
-    function isFeriado(date) {
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const year = date.getFullYear();
-        return feriados.includes(`${month}-${day}`) || feriados.includes(`${year}-${month}-${day}`);
-    }
-
-    function isDiaUtil(date) {
-        const diaSemana = date.getDay();
-        if (diaSemana === 0 || diaSemana === 6) return false; 
-        if (isFeriado(date)) return false;
-        return true;
-    }
-
     document.addEventListener('DOMContentLoaded', async function() {
         const container = document.getElementById('agenda-list');
         try {
             const response = await fetch('./horarios.json?t=' + new Date().getTime());
-            if (!response.ok) throw new Error("Falha");
+            if (!response.ok) throw new Error("Falha ao carregar JSON");
             const data = await response.json();
 
             const now = new Date();
-            let maxDate = new Date(now);
-            let diasUteisAdicionados = 0;
             
-            while (diasUteisAdicionados < 10) {
-                maxDate.setDate(maxDate.getDate() + 1);
-                if (isDiaUtil(maxDate)) diasUteisAdicionados++;
-            }
+            // --- CÁLCULO DE 10 DIAS CORRIDOS (Sem filtros) ---
+            let maxDate = new Date(now);
+            maxDate.setDate(now.getDate() + 10);
             maxDate.setHours(23, 59, 59, 999);
+            // --------------------------------------------------
 
             let slotsList = [];
             const seenTimes = new Set(); 
 
             data.forEach(event => {
                 const startTime = new Date(event.start);
-                if (startTime >= now && startTime <= maxDate && isDiaUtil(startTime)) {
+                
+                // Pega qualquer horário que estiver entre hoje e os próximos 10 dias
+                if (startTime >= now && startTime <= maxDate) {
                     const timeKey = startTime.getTime();
+                    
+                    // Impede que mostre o mesmo horário duas vezes (se 2 assessores estiverem livres na mesma hora)
                     if (!seenTimes.has(timeKey)) {
                         seenTimes.add(timeKey);
                         slotsList.push({ start: startTime, url: event.url });
@@ -149,7 +130,9 @@
                 }
             });
 
+            // Ordena do horário mais próximo para o mais distante
             slotsList.sort((a, b) => a.start - b.start);
+            
             const groupedByDay = {};
             slotsList.forEach(slot => {
                 let dayString = slot.start.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
@@ -158,8 +141,9 @@
             });
 
             container.innerHTML = '';
+            
             if (Object.keys(groupedByDay).length === 0) {
-                container.innerHTML = '<div class="no-slots">Nenhum horário disponível nos próximos dias úteis.</div>';
+                container.innerHTML = '<div class="no-slots">Nenhum horário disponível nos próximos 10 dias.</div>';
                 return;
             }
 
@@ -175,6 +159,7 @@
                     slotEl.href = slot.url;
                     slotEl.target = '_blank';
 
+                    // Soma a duração padrão de 1 hora
                     const endTime = new Date(slot.start.getTime() + (60 * 60 * 1000));
                     const formatTime = (d) => d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
@@ -183,6 +168,7 @@
                 });
             }
         } catch (error) {
+            console.error("Erro na agenda:", error);
             container.innerHTML = '<div class="no-slots">Não foi possível carregar a agenda no momento.</div>';
         }
     });
