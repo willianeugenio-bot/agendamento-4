@@ -33,7 +33,7 @@ def obter_horarios():
         # Fatias: [Hoje até dia 7] e [Dia 7 até dia 10]
         intervalos = [
             (agora_utc + timedelta(minutes=1), agora_utc + timedelta(days=7)),
-            (agora_utc + timedelta(days=7, minutes=1), agora_utc + timedelta(days=10))
+            (agora_utc + timedelta(days=7, minutes=1), agora_utc + timedelta(days=14))
         ]
         
         for start_time, end_time in intervalos:
